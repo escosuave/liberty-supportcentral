@@ -19,34 +19,39 @@ you<h1 class="visibility-hidden">{{ help_center.name }}</h1>
   
     <br>
   
-  <div style="background-color:#42a5f5; color:white; padding:10px 15px; border-radius:6px; font-family:Arial, sans-serif; display:flex; align-items:center;">
-  <span style="background-color:white; color:#42a5f5; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-right:10px;">i</span>
-  <span>
-    Are you having problems logging into LINK/LRC? Read more 
-    <a href="https://supportcentral.libertytax.net/hc/en-us/articles/34426677214999-Logging-Into-LINK-New-LRC-Powered-by-FranConnect" style="color:#000; text-decoration:underline;">here</a>.
-  </span>
-</div>
+<section class="homepage-announcements">
+  <div id="announcements" aria-live="polite">
+    <!-- Fallback/initial content in case fetch fails -->
+    <!-- You can paste one minimal card here or keep it empty -->
+  </div>
+</section>
+
+<script>
+(function () {
+  // CHANGE ME: point to your repo path
+  const SRC = "https://raw.githubusercontent.com/escosuave/liberty-supportcentral-announcements/refs/heads/main/announcements.html";
+  const target = document.getElementById("announcements");
+
+  // Cache bust on each publish/view, but keep CDN-friendly:
+  const url = SRC + "?v=" + (window.theme && window.theme.settings && window.theme.settings.theme_version ? window.theme.settings.theme_version : Date.now());
+
+  fetch(url, { cache: "no-store" })
+    .then(r => r.ok ? r.text() : Promise.reject(new Error("HTTP " + r.status)))
+    .then(html => {
+      // Because you control the source file, innerHTML is acceptable.
+      // If you ever allow 3rd-party edits, sanitize here before injecting.
+      target.innerHTML = html.trim();
+    })
+    .catch(err => {
+      console.error("Announcements load failed:", err);
+      // Optional: keep the fallback or show a small message
+      // target.innerHTML = "<p>Announcements are temporarily unavailable.</p>";
+    });
+})();
+</script>
+
+
   
-  <br>
-  
-  
-  <div style="background-color:#42a5f5; color:white; padding:10px 15px; border-radius:6px; font-family:Arial, sans-serif; display:flex; align-items:center;">
-  <span style="background-color:white; color:#42a5f5; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-right:10px;">i</span>
-  <span>
-   User Manager accounts are automatically disabled after 30 days of inactivity. Learn how to reactivate your staff's accounts
-    <a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-Do-I-Reactivate-a-Disabled-Employee-Account" style="color:#000; text-decoration:underline;">here</a>.
-  </span>
-</div>
-  
-  <br>
-  
-  <div style="background-color:#42a5f5; color:white; padding:10px 15px; border-radius:6px; font-family:Arial, sans-serif; display:flex; align-items:center;">
-  <span style="background-color:white; color:#42a5f5; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-right:10px;">i</span>
-  <span>
-    Microsoft has ended its support of Windows 10 on October 14, 2025. Learn how to upgrade to Windows 11 
-    <a href="https://supportcentral.libertytax.net/hc/en-us/articles/4410646721687-Windows-10-Support-Ending-Soon-What-You-Need-to-Do" style="color:#000; text-decoration:underline;">here</a>.
-  </span>
-</div>
   <br>
   <br>
  
