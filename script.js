@@ -400,55 +400,60 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Map form IDs → banner HTML
-  const BANNERS_BY_FORM = {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const isNewRequest = /\/hc\/[^/]+\/requests\/new$/.test(window.location.pathname);
+    const formId = params.get('ticket_form_id');
+
+    if (!isNewRequest) return;
+
+    // Decide which banner (if any) to show based on formId
+    let bannerHtml = null;
+
     // Login form banner
-    '360005277354':
-      'Trouble logging in? Your account may be disabled. ' +
-      '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" ' +
-      'target="_blank" rel="noopener">Learn how to enable it here</a>.',
+    if (formId === '360005277354') {
+      bannerHtml =
+        'Trouble logging in? Your account may be disabled. ' +
+        '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" target="_blank" rel="noopener">Learn how to enable it here</a>.';
+    }
 
     // Marketing Support form banner
-    '1500001438362':
-      'Note: Current Marketing Support reply time is 2–3 days'
-  };
+    if (formId === '1500001438362') {
+      bannerHtml = 'Note: Current Marketing Support reply time is 2–3 days';
+    }
 
-  // Get ticket_form_id from the URL, e.g. ?ticket_form_id=1500001438362
-  const params = new URLSearchParams(window.location.search);
-  const formId = params.get('ticket_form_id');
+    // If it's not one of those two forms, do nothing
+    if (!bannerHtml) return;
 
-  // If this form doesn't have a banner, stop
-  if (!formId || !BANNERS_BY_FORM[formId]) return;
+    const insertBanner = () => {
+      // form can be #new_request or (rarely) another selector; try a few
+      const form =
+        document.getElementById('new_request') ||
+        document.querySelector('form#new_request') ||
+        document.querySelector('form[aria-label="Submit a request"]') ||
+        document.querySelector('form[action*="/requests"]');
 
-  // Find the request form element
-  let form =
-    document.getElementById('new_request') ||
-    document.querySelector('form#new_request') ||
-    document.querySelector('form[action*="/requests"]');
+      if (!form || document.querySelector('.custom-banner')) return false;
 
-  if (!form) return;
+      const div = document.createElement('div');
+      div.className = 'custom-banner';
+      div.innerHTML = bannerHtml;
 
-  // Remove any existing .custom-banner (just in case)
-  form.querySelectorAll('.custom-banner').forEach(el => el.remove());
+      // Place at very top of the form
+      form.insertBefore(div, form.firstChild);
+      return true;
+    };
 
-  // Create and insert the banner
-  const banner = document.createElement('div');
-  banner.className = 'custom-banner';
-  banner.innerHTML = BANNERS_BY_FORM[formId];
-
-  form.insertBefore(banner, form.firstChild);
-});
-
-  function insertBanner(form, html) {
-    const banner = document.createElement('div');
-    banner.className = 'custom-banner';
-    banner.innerHTML = html;
-    form.insertBefore(banner, form.firstChild);
+    // Try immediately; if not present yet, watch for it
+    if (!insertBanner()) {
+      const obs = new MutationObserver(() => {
+        if (insertBanner()) obs.disconnect();
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+    }
+  } catch (e) {
+    console.error('Banner injection error:', e);
   }
-
-  updateBanner();
-  new MutationObserver(updateBanner).observe(document.body, { childList: true, subtree: true });
-  document.addEventListener('change', updateBanner);
 });
 
 document.addEventListener('DOMContentLoaded', function () {
