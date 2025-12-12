@@ -400,119 +400,44 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const isNewRequest = /\/hc\/[^/]+\/requests\/new$/.test(window.location.pathname);
-    const isTargetForm = params.get('ticket_form_id') === '360005277354';
+  // Map form IDs → banner HTML
+  const BANNERS_BY_FORM = {
+    // Login form banner
+    '360005277354':
+      'Trouble logging in? Your account may be disabled. ' +
+      '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" ' +
+      'target="_blank" rel="noopener">Learn how to enable it here</a>.',
 
-    if (!isNewRequest || !isTargetForm) return;
+    // Marketing Support form banner
+    '1500001438362':
+      'Note: Current Marketing Support reply time is 2–3 days'
+  };
 
-    const insertBanner = () => {
-      // form can be #new_request or (rarely) another selector; try a few
-      const form =
-        document.getElementById('new_request') ||
-        document.querySelector('form#new_request') ||
-        document.querySelector('form[aria-label="Submit a request"]') ||
-        document.querySelector('form[action*="/requests"]');
+  // Get ticket_form_id from the URL, e.g. ?ticket_form_id=1500001438362
+  const params = new URLSearchParams(window.location.search);
+  const formId = params.get('ticket_form_id');
 
-      if (!form || document.querySelector('.custom-banner')) return false;
+  // If this form doesn't have a banner, stop
+  if (!formId || !BANNERS_BY_FORM[formId]) return;
 
-      const div = document.createElement('div');
-      div.className = 'custom-banner';
-      div.innerHTML =
-        'Trouble logging in? Your account may be disabled. ' +
-        '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" target="_blank" rel="noopener">Learn how to enable it here</a>.';
+  // Find the request form element
+  let form =
+    document.getElementById('new_request') ||
+    document.querySelector('form#new_request') ||
+    document.querySelector('form[action*="/requests"]');
 
-      // Place at very top of the form
-      form.insertBefore(div, form.firstChild);
-      return true;
-    };
+  if (!form) return;
 
-    // Try immediately; if not present yet, watch for it
-    if (!insertBanner()) {
-      const obs = new MutationObserver(() => {
-        if (insertBanner()) obs.disconnect();
-      });
-      obs.observe(document.body, { childList: true, subtree: true });
-    }
-  } catch (e) {
-    console.error('Banner injection error:', e);
-  }
+  // Remove any existing .custom-banner (just in case)
+  form.querySelectorAll('.custom-banner').forEach(el => el.remove());
+
+  // Create and insert the banner
+  const banner = document.createElement('div');
+  banner.className = 'custom-banner';
+  banner.innerHTML = BANNERS_BY_FORM[formId];
+
+  form.insertBefore(banner, form.firstChild);
 });
-
-document.addEventListener('DOMContentLoaded', function () {
-
-  // Try very hard to find the request form
-  function getRequestForm() {
-    // Prefer a form that actually has the Subject/Description fields
-    var forms = Array.prototype.slice.call(document.querySelectorAll('form'));
-    for (var i = 0; i < forms.length; i++) {
-      if (forms[i].querySelector('#request_subject') || forms[i].querySelector('#request_description')) {
-        return forms[i];
-      }
-    }
-    // Fallbacks
-    return (
-      document.querySelector('form[action*="/requests"]') ||
-      document.getElementById('new_request') ||
-      document.querySelector('form#new_request')
-    );
-  }
-
-  // Find the “Support Team” / ticket form selector
-  function getSupportTeamSelect() {
-    return (
-      document.querySelector('#request_issue_type_select') ||
-      document.querySelector('select[id*="request_issue_type"]') ||
-      document.querySelector('select[aria-label*="Support Team"]') ||
-      document.querySelector('select[name*="request[issue_type]"]')
-    );
-  }
-
-  function updateMarketingBanner() {
-    var form = getRequestForm();
-    if (!form) return;
-
-    // Remove existing Marketing banner (leave your login one alone)
-    var existing = form.querySelector('.custom-banner-marketing');
-    if (existing && existing.parentNode) {
-      existing.parentNode.removeChild(existing);
-    }
-
-    var select = getSupportTeamSelect();
-    if (!select || !select.options.length) return;
-
-    var label = (select.options[select.selectedIndex].textContent || '').trim().toLowerCase();
-
-    // Only show on the Marketing form
-    if (label !== 'marketing') return;
-
-    var banner = document.createElement('div');
-    banner.className = 'custom-banner custom-banner-marketing';
-    banner.textContent = 'Note: Current Marketing Support reply time is 2–3 days';
-
-    form.insertBefore(banner, form.firstChild);
-  }
-
-  // Run once on load
-  updateMarketingBanner();
-
-  // Re-run if Zendesk re-renders the form
-  var mo = new MutationObserver(function () {
-    updateMarketingBanner();
-  });
-  mo.observe(document.body, { childList: true, subtree: true });
-
-  // Re-run when the Support Team dropdown changes
-  document.addEventListener('change', function (e) {
-    var select = getSupportTeamSelect();
-    if (!select) return;
-    if (e.target === select) {
-      updateMarketingBanner();
-    }
-  });
-});
-
 
   function insertBanner(form, html) {
     const banner = document.createElement('div');
@@ -617,28 +542,3 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 });
-// --- Simple, isolated Marketing banner based ONLY on the URL ---
-$(function () {
-  // Only run on Marketing form URL
-  if (window.location.search.indexOf('ticket_form_id=1500001438362') === -1) {
-    return;
-  }
-
-  var $form = $('#new_request');
-  if ($form.length === 0) {
-    // Fallback: any form that posts to /requests
-    $form = $('form[action*="/requests"]').first();
-  }
-  if ($form.length === 0) return;
-
-  // Remove any existing Marketing banner
-  $form.find('.custom-banner-marketing').remove();
-
-  // Insert the banner at the very top of the form
-  $form.prepend(
-    '<div class="custom-banner custom-banner-marketing">' +
-      'Note: Current Marketing Support reply time is 2–3 days' +
-    '</div>'
-  );
-});
-console.log("🔥 script.js IS LOADED");
