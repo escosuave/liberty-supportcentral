@@ -400,57 +400,119 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const isNewRequest = /\/hc\/[^/]+\/requests\/new$/.test(window.location.pathname);
+    const isTargetForm = params.get('ticket_form_id') === '360005277354';
 
-  function getActiveFormId() {
-    const qsId = new URLSearchParams(location.search).get('ticket_form_id');
-    if (qsId) return qsId;
+    if (!isNewRequest || !isTargetForm) return;
 
-    const select = document.querySelector('#request_issue_type_select');
-    if (select && select.value) return select.value;
+    const insertBanner = () => {
+      // form can be #new_request or (rarely) another selector; try a few
+      const form =
+        document.getElementById('new_request') ||
+        document.querySelector('form#new_request') ||
+        document.querySelector('form[aria-label="Submit a request"]') ||
+        document.querySelector('form[action*="/requests"]');
 
-    const hidden = document.querySelector('input[name="ticket_form_id"], input[name="request[ticket_form_id]"]');
-    if (hidden && hidden.value) return hidden.value;
+      if (!form || document.querySelector('.custom-banner')) return false;
 
-    return null;
+      const div = document.createElement('div');
+      div.className = 'custom-banner';
+      div.innerHTML =
+        'Trouble logging in? Your account may be disabled. ' +
+        '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" target="_blank" rel="noopener">Learn how to enable it here</a>.';
+
+      // Place at very top of the form
+      form.insertBefore(div, form.firstChild);
+      return true;
+    };
+
+    // Try immediately; if not present yet, watch for it
+    if (!insertBanner()) {
+      const obs = new MutationObserver(() => {
+        if (insertBanner()) obs.disconnect();
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+    }
+  } catch (e) {
+    console.error('Banner injection error:', e);
+  }
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+
+  // Try very hard to find the request form
+  function getRequestForm() {
+    // Prefer a form that actually has the Subject/Description fields
+    var forms = Array.prototype.slice.call(document.querySelectorAll('form'));
+    for (var i = 0; i < forms.length; i++) {
+      if (forms[i].querySelector('#request_subject') || forms[i].querySelector('#request_description')) {
+        return forms[i];
+      }
+    }
+    // Fallbacks
+    return (
+      document.querySelector('form[action*="/requests"]') ||
+      document.getElementById('new_request') ||
+      document.querySelector('form#new_request')
+    );
   }
 
-  function getActiveFormLabel() {
-    const select = document.querySelector('#request_issue_type_select');
-    if (!select) return '';
-    return (select.options[select.selectedIndex].textContent || '').trim().toLowerCase();
+  // Find the “Support Team” / ticket form selector
+  function getSupportTeamSelect() {
+    return (
+      document.querySelector('#request_issue_type_select') ||
+      document.querySelector('select[id*="request_issue_type"]') ||
+      document.querySelector('select[aria-label*="Support Team"]') ||
+      document.querySelector('select[name*="request[issue_type]"]')
+    );
   }
 
-  function getFormElement() {
-    return document.querySelector('form[action*="/requests"]');
-  }
-
-  function updateBanner() {
-    const form = getFormElement();
+  function updateMarketingBanner() {
+    var form = getRequestForm();
     if (!form) return;
 
-    // remove old banners
-    form.querySelectorAll('.custom-banner').forEach(el => el.remove());
-
-    const label = getActiveFormLabel();
-    const id = getActiveFormId();
-
-    // LOGIN FORM
-    if (id === '360005277354') {
-      insertBanner(form,
-        'Trouble logging in? Your account may be disabled. ' +
-        '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" target="_blank">Learn how to enable it here</a>.'
-      );
-      return;
+    // Remove existing Marketing banner (leave your login one alone)
+    var existing = form.querySelector('.custom-banner-marketing');
+    if (existing && existing.parentNode) {
+      existing.parentNode.removeChild(existing);
     }
 
-    // MARKETING FORM  (label only!)
-    if (id === '1500001438362') {
-      insertBanner(form,
-        'Note: Current Marketing Support reply time is 2–3 days'
-      );
-      return;
-    }
+    var select = getSupportTeamSelect();
+    if (!select || !select.options.length) return;
+
+    var label = (select.options[select.selectedIndex].textContent || '').trim().toLowerCase();
+
+    // Only show on the Marketing form
+    if (label !== 'marketing') return;
+
+    var banner = document.createElement('div');
+    banner.className = 'custom-banner custom-banner-marketing';
+    banner.textContent = 'Note: Current Marketing Support reply time is 2–3 days';
+
+    form.insertBefore(banner, form.firstChild);
   }
+
+  // Run once on load
+  updateMarketingBanner();
+
+  // Re-run if Zendesk re-renders the form
+  var mo = new MutationObserver(function () {
+    updateMarketingBanner();
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+
+  // Re-run when the Support Team dropdown changes
+  document.addEventListener('change', function (e) {
+    var select = getSupportTeamSelect();
+    if (!select) return;
+    if (e.target === select) {
+      updateMarketingBanner();
+    }
+  });
+});
+
 
   function insertBanner(form, html) {
     const banner = document.createElement('div');
