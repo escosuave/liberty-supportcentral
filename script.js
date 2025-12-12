@@ -400,44 +400,80 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const isNewRequest = /\/hc\/[^/]+\/requests\/new$/.test(window.location.pathname);
-    const isTargetForm = params.get('ticket_form_id') === '360005277354';
+  const isNewRequest = /\/hc\/[^/]+\/requests\/new$/.test(location.pathname);
 
-    if (!isNewRequest || !isTargetForm) return;
+  // Map form IDs → banner HTML
+  const BANNERS_BY_FORM = {
+    // Login form banner
+    '360005277354': 
+      'Trouble logging in? Your account may be disabled. ' +
+      '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" target="_blank" rel="noopener">' +
+      'Learn how to enable it here</a>.',
 
-    const insertBanner = () => {
-      // form can be #new_request or (rarely) another selector; try a few
-      const form =
-        document.getElementById('new_request') ||
-        document.querySelector('form#new_request') ||
-        document.querySelector('form[aria-label="Submit a request"]') ||
-        document.querySelector('form[action*="/requests"]');
+    // Marketing Support form banner
+    '1500001438362': 
+      'Note: Current Marketing Support reply time is 2–3 days'
+  };
 
-      if (!form || document.querySelector('.custom-banner')) return false;
+  if (!isNewRequest) return;
 
-      const div = document.createElement('div');
-      div.className = 'custom-banner';
-      div.innerHTML =
-        'Trouble logging in? Your account may be disabled. ' +
-        '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" target="_blank" rel="noopener">Learn how to enable it here</a>.';
+  function getActiveFormId() {
+    // 1) URL query: ?ticket_form_id=...
+    const qsId = new URLSearchParams(location.search).get('ticket_form_id');
+    if (qsId) return qsId;
 
-      // Place at very top of the form
-      form.insertBefore(div, form.firstChild);
-      return true;
-    };
+    // 2) Form dropdown, if user switches forms
+    const select = document.querySelector('#request_issue_type_select');
+    if (select && select.value) return select.value;
 
-    // Try immediately; if not present yet, watch for it
-    if (!insertBanner()) {
-      const obs = new MutationObserver(() => {
-        if (insertBanner()) obs.disconnect();
-      });
-      obs.observe(document.body, { childList: true, subtree: true });
-    }
-  } catch (e) {
-    console.error('Banner injection error:', e);
+    // 3) Hidden input Zendesk uses
+    const hidden = document.querySelector(
+      'input[name="ticket_form_id"], input[name="request[ticket_form_id]"]'
+    );
+    if (hidden && hidden.value) return hidden.value;
+
+    return null;
   }
+
+  function getFormElement() {
+    return (
+      document.getElementById('new_request') ||
+      document.querySelector('form#new_request') ||
+      document.querySelector('form[action*="/requests"]')
+    );
+  }
+
+  function updateBanner() {
+    const formId = getActiveFormId();
+    const form = getFormElement();
+    if (!form) return;
+
+    // Remove any existing custom banners
+    form.querySelectorAll('.custom-banner').forEach(el => el.remove());
+
+    // If this form doesn’t have a banner configured, do nothing
+    if (!formId || !BANNERS_BY_FORM[formId]) return;
+
+    // Create and insert new banner for this form
+    const banner = document.createElement('div');
+    banner.className = 'custom-banner';
+    banner.innerHTML = BANNERS_BY_FORM[formId];
+
+    form.insertBefore(banner, form.firstChild);
+  }
+
+  // Initial run
+  updateBanner();
+
+  // Watch for form content / dropdown changing
+  const obs = new MutationObserver(() => updateBanner());
+  obs.observe(document.body, { childList: true, subtree: true });
+
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'request_issue_type_select') {
+      updateBanner();
+    }
+  });
 });
 
 document.addEventListener('DOMContentLoaded', function () {
