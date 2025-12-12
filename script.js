@@ -400,79 +400,68 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Map form IDs → banner HTML
-  const BANNERS_BY_FORM = {
-    // Login form banner
-    '360005277354':
-      'Trouble logging in? Your account may be disabled. ' +
-      '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" target="_blank" rel="noopener">' +
-      'Learn how to enable it here</a>.',
 
-    // Marketing Support form banner
-    '1500001438362':
-      'Note: Current Marketing Support reply time is 2–3 days'
-  };
-
-  // Get active form id from URL, dropdown, or hidden input
   function getActiveFormId() {
-    // 1) URL query: ?ticket_form_id=...
     const qsId = new URLSearchParams(location.search).get('ticket_form_id');
     if (qsId) return qsId;
 
-    // 2) Form dropdown, if user switches forms
     const select = document.querySelector('#request_issue_type_select');
     if (select && select.value) return select.value;
 
-    // 3) Hidden input Zendesk uses
-    const hidden = document.querySelector(
-      'input[name="ticket_form_id"], input[name="request[ticket_form_id]"]'
-    );
+    const hidden = document.querySelector('input[name="ticket_form_id"], input[name="request[ticket_form_id]"]');
     if (hidden && hidden.value) return hidden.value;
 
     return null;
   }
 
-  // Grab the request form element, however Zendesk rendered it
+  function getActiveFormLabel() {
+    const select = document.querySelector('#request_issue_type_select');
+    if (!select) return '';
+    return (select.options[select.selectedIndex].textContent || '').trim().toLowerCase();
+  }
+
   function getFormElement() {
-    return (
-      document.getElementById('new_request') ||
-      document.querySelector('form#new_request') ||
-      document.querySelector('form[action*="/requests"]')
-    );
+    return document.querySelector('form[action*="/requests"]');
   }
 
   function updateBanner() {
-    const formId = getActiveFormId();
     const form = getFormElement();
-    if (!form) return; // not on a request form → do nothing
+    if (!form) return;
 
-    // Remove any existing custom banners
+    // remove old banners
     form.querySelectorAll('.custom-banner').forEach(el => el.remove());
 
-    // If this form doesn’t have a banner configured, stop here
-    if (!formId || !BANNERS_BY_FORM[formId]) return;
+    const label = getActiveFormLabel();
+    const id = getActiveFormId();
 
-    // Create and insert new banner for this form
+    // LOGIN FORM
+    if (id === '360005277354') {
+      insertBanner(form,
+        'Trouble logging in? Your account may be disabled. ' +
+        '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" target="_blank">Learn how to enable it here</a>.'
+      );
+      return;
+    }
+
+    // MARKETING FORM  (label only!)
+    if (label === 'marketing') {
+      insertBanner(form,
+        'Note: Current Marketing Support reply time is 2–3 days'
+      );
+      return;
+    }
+  }
+
+  function insertBanner(form, html) {
     const banner = document.createElement('div');
     banner.className = 'custom-banner';
-    banner.innerHTML = BANNERS_BY_FORM[formId];
-
+    banner.innerHTML = html;
     form.insertBefore(banner, form.firstChild);
   }
 
-  // Initial run
   updateBanner();
-
-  // Watch for form changing / being re-rendered
-  const obs = new MutationObserver(() => updateBanner());
-  obs.observe(document.body, { childList: true, subtree: true });
-
-  // Also react if the user switches the form dropdown
-  document.addEventListener('change', function (e) {
-    if (e.target && e.target.id === 'request_issue_type_select') {
-      updateBanner();
-    }
-  });
+  new MutationObserver(updateBanner).observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('change', updateBanner);
 });
 
 document.addEventListener('DOMContentLoaded', function () {
