@@ -400,23 +400,20 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-  const isNewRequest = /\/hc\/[^/]+\/requests\/new$/.test(location.pathname);
-
   // Map form IDs → banner HTML
   const BANNERS_BY_FORM = {
     // Login form banner
-    '360005277354': 
+    '360005277354':
       'Trouble logging in? Your account may be disabled. ' +
       '<a href="https://supportcentral.libertytax.net/hc/en-us/articles/6961988401559-How-to-Activate-and-Terminate-Users-in-User-Manager" target="_blank" rel="noopener">' +
       'Learn how to enable it here</a>.',
 
     // Marketing Support form banner
-    '1500001438362': 
+    '1500001438362':
       'Note: Current Marketing Support reply time is 2–3 days'
   };
 
-  if (!isNewRequest) return;
-
+  // Get active form id from URL, dropdown, or hidden input
   function getActiveFormId() {
     // 1) URL query: ?ticket_form_id=...
     const qsId = new URLSearchParams(location.search).get('ticket_form_id');
@@ -435,6 +432,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return null;
   }
 
+  // Grab the request form element, however Zendesk rendered it
   function getFormElement() {
     return (
       document.getElementById('new_request') ||
@@ -446,12 +444,12 @@ document.addEventListener('DOMContentLoaded', function () {
   function updateBanner() {
     const formId = getActiveFormId();
     const form = getFormElement();
-    if (!form) return;
+    if (!form) return; // not on a request form → do nothing
 
     // Remove any existing custom banners
     form.querySelectorAll('.custom-banner').forEach(el => el.remove());
 
-    // If this form doesn’t have a banner configured, do nothing
+    // If this form doesn’t have a banner configured, stop here
     if (!formId || !BANNERS_BY_FORM[formId]) return;
 
     // Create and insert new banner for this form
@@ -465,10 +463,11 @@ document.addEventListener('DOMContentLoaded', function () {
   // Initial run
   updateBanner();
 
-  // Watch for form content / dropdown changing
+  // Watch for form changing / being re-rendered
   const obs = new MutationObserver(() => updateBanner());
   obs.observe(document.body, { childList: true, subtree: true });
 
+  // Also react if the user switches the form dropdown
   document.addEventListener('change', function (e) {
     if (e.target && e.target.id === 'request_issue_type_select') {
       updateBanner();
