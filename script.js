@@ -617,3 +617,27 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 });
+// --- Simple, isolated Marketing banner based ONLY on the URL ---
+$(function () {
+  // Only run on Marketing form URL
+  if (window.location.search.indexOf('ticket_form_id=1500001438362') === -1) {
+    return;
+  }
+
+  var $form = $('#new_request');
+  if ($form.length === 0) {
+    // Fallback: any form that posts to /requests
+    $form = $('form[action*="/requests"]').first();
+  }
+  if ($form.length === 0) return;
+
+  // Remove any existing Marketing banner
+  $form.find('.custom-banner-marketing').remove();
+
+  // Insert the banner at the very top of the form
+  $form.prepend(
+    '<div class="custom-banner custom-banner-marketing">' +
+      'Note: Current Marketing Support reply time is 2–3 days' +
+    '</div>'
+  );
+});
