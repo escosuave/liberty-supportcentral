@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // MARKETING FORM  (label only!)
-    if (label === 'marketing') {
+    if (id === '1500001438362') {
       insertBanner(form,
         'Note: Current Marketing Support reply time is 2–3 days'
       );
