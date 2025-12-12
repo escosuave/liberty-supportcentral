@@ -4751,9 +4751,10 @@ html[dir="rtl"] .notification-left-aligned {
   color: #856404;
 }
 
-/* Make sure Marketing one is always visible */
-.custom-banner-marketing {
-  display: block !important;
+.custom-banner a {
+  color: #004990;
+  text-decoration: underline;
+  font-weight: bold;
 }
 
 /* Base box */
