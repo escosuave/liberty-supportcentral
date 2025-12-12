@@ -641,3 +641,4 @@ $(function () {
     '</div>'
   );
 });
+console.log("🔥 script.js IS LOADED");
